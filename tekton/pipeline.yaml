@@ -1,0 +1,23 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: fastapi-playground
+spec:
+  resources:
+  - name: source-repo
+    type: git
+  tasks:
+  - name: run-tests
+    taskRef:
+      name: run-tests
+    resources:
+      inputs:
+      - name: source
+        resource: source-repo
+  - name: build-docker
+    taskRef:
+      name: build-docker
+    resources:
+      inputs:
+      - name: source
+        resource: source-repo

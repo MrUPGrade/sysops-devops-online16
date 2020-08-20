@@ -1,0 +1,84 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: fastapi-
+spec:
+  entrypoint: pipeline
+  #  ttlSecondsAfterFinished: 300
+
+  arguments:
+    parameters:
+    - name: buildnumber
+
+  volumeClaimTemplates:
+  - metadata:
+      name: workspace
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
+
+  volumes:
+  - name: docker-config
+    secret:
+      secretName: dockerhub
+
+  templates:
+  - name: pipeline
+    steps:
+    - - name: clone
+        template: git-clone
+    - - name: test
+        template: python-tests
+    - - name: docker-build
+        template: docker-build
+        arguments:
+          parameters:
+          - name: tag
+            value: "{{workflow.parameters.buildnumber}}"
+
+
+  - name: git-clone
+    container:
+      image: iceci/utils
+      command: [ "git" ]
+      args:
+      - "clone"
+      - "https://github.com/MrUPGrade/fastapi-playground.git"
+      - "src"
+      workingDir: /workspace
+      volumeMounts:
+      - name: workspace
+        mountPath: /workspace
+
+  - name: python-tests
+    script:
+      image: python:3.7
+      command: [ "bash" ]
+      source: |
+        pip install -r requirements.txt
+        pip install -r requirements-test.txt
+        pytest tests/unit
+      workingDir: /workspace
+      volumeMounts:
+      - name: workspace
+        mountPath: /workspace
+        subPath: src
+
+  - name: docker-build
+    inputs:
+      parameters:
+      - name: tag
+    container:
+      image: gcr.io/kaniko-project/executor:latest
+      args:
+      - "--dockerfile=Dockerfile"
+      - "--context=dir:///workspace/"
+      - "--destination=docker.io/mrupgrade/fastapi-playground:argo-{{inputs.parameters.tag}}"
+      volumeMounts:
+      - name: workspace
+        mountPath: /workspace
+        subPath: src
+      - name: docker-config
+        mountPath: /kaniko/.docker/

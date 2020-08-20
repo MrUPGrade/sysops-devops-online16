@@ -1,0 +1,12 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: fastapi-playground
+spec:
+  serviceAccountName: pipeline-service
+  pipelineRef:
+    name: fastapi-playground
+  resources:
+  - name: source-repo
+    resourceRef:
+      name: fastapi-playground-git

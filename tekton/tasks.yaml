@@ -1,0 +1,55 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: build-docker
+spec:
+  resources:
+    inputs:
+    - name: source
+      type: git
+  steps:
+  - name: build-and-push
+    image: gcr.io/kaniko-project/executor:v0.16.0
+    env:
+    - name: "DOCKER_CONFIG"
+      value: "/tekton/home/.docker/"
+    command:
+    - /kaniko/executor
+    args:
+    - --dockerfile=/workspace/source/Dockerfile
+    - --destination=mrupgrade/tekton:test
+    - --context=/workspace/source
+
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: run-tests
+spec:
+  resources:
+    inputs:
+    - name: source
+      type: git
+  steps:
+  - name: debug
+    image: busybox
+    command:
+    - /bin/sh
+    args:
+    - -c
+    - |
+      pwd
+      env
+      ls -l
+      ls -l source
+  - name: pytest
+    image: python:3.7
+    command:
+    - /bin/sh
+    args:
+    - -c
+    - |
+      cd source
+      pip install -r requirements.txt
+      pip install -r requirements-test.txt
+      pytest tests/unit

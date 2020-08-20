@@ -1,0 +1,25 @@
+apiVersion: iceci.io/v1alpha1
+kind: Pipeline
+metadata:
+  name: multiple-steps
+spec:
+  pipelineSpec:
+    steps:
+    - name: busy-echo
+      containerRun:
+        image: busybox
+        script: "echo busybox"
+
+    - name: python-version
+      containerRun:
+        image: python:3.7
+        script: "python --version"
+
+    - name: debian-script
+      containerRun:
+        image: debian:stretch
+        script: |
+          echo "### env"
+          env
+          echo "### pwd"
+          pwd
